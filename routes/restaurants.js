@@ -107,7 +107,7 @@ router.get("/details", async (req, res, next) => {
     res.json(data);
   } catch (err) {
     console.log(err);
-    res.json({});
+    res.status(404).json({});
   }
 });
 
@@ -118,7 +118,7 @@ router.get("/photo", async (req, res, next) => {
     #swagger.description = 'Endpoint to get a photo from Google API given by the photo ID'
     */
 
-    /* 
+  /* 
     #swagger.parameters['id'] = {
       in: 'query',
       description: 'The ID of a photo assigned by Google Places API',
@@ -151,7 +151,7 @@ router.get("/photo", async (req, res, next) => {
   } catch (err) {
     // TODO: error handling
     console.log(err);
-    res.json({});
+    res.status(404).json({});
   }
 });
 
@@ -162,7 +162,7 @@ router.get("/search", async (req, res, next) => {
     #swagger.description = 'Endpoint to search 15 restaurants from Google API based on the keyword and the coordinate'
     */
 
-    /* 
+  /* 
     #swagger.parameters['keyword'] = {
       in: 'query',
       description: 'The keyword to be searched by user',
@@ -243,7 +243,7 @@ router.get("/search", async (req, res, next) => {
     res.json(places);
   } catch (err) {
     console.log(err);
-    res.json([]);
+    res.status(404).json([]);
   }
 });
 
