@@ -213,6 +213,7 @@ router.get("/search", async (req, res, next) => {
         "places.rating",
         "places.userRatingCount",
         "places.currentOpeningHours",
+        "places.location",
       ].join(","),
     };
     const response = await axios.post(
@@ -227,14 +228,16 @@ router.get("/search", async (req, res, next) => {
     for (const ele of response.data.places) {
       places.push({
         id: ele.id,
-        name: ele.displayName,
+        name: ele.displayName.text,
         rating: ele.rating ?? null,
         userRatingCount: ele.userRatingCount ?? null,
         openNow: ele.currentOpeningHours?.openNow ?? null,
-        Address: ele.formattedAddress ?? null,
+        address: ele.formattedAddress ?? null,
         startPrice: ele.priceRange?.startPrice?.units ?? null,
         endPrice: ele.priceRange?.endPrice?.units ?? null,
         photoId: ele.photos.length > 0 ? ele.photos[0].name : null,
+        lat: ele.location.latitude,
+        lng: ele.location.longitude,
       });
     }
     res.json(places);
