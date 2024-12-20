@@ -74,6 +74,7 @@ router.get("/details", async (req, res, next) => {
             "rating",
             "websiteUri",
             "userRatingCount",
+            "location",
           ].join(","),
           key: process.env.API_KEY,
           languageCode: "zh-TW",
@@ -102,6 +103,8 @@ router.get("/details", async (req, res, next) => {
       googleMapsUri: response.data.googleMapsUri,
       openNow: response.data.currentOpeningHours?.openNow ?? null,
       photoIds: photoNames,
+      lat: response.data.location.latitude,
+      lng: response.data.location.longitude,
     };
 
     res.json(data);
@@ -198,7 +201,7 @@ router.get("/search", async (req, res, next) => {
             latitude: lat,
             longitude: lng,
           },
-          radius: 1000.0,
+          radius:   2000.0,
         },
       },
     };
