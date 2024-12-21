@@ -4,6 +4,98 @@ const axios = require("axios");
 
 const app = express();
 
+//根據關鍵字和經緯度搜尋結果
+router.get("/search", async (req, res, next) => {
+  /* 	
+    #swagger.summary = 'Search restaurants for the keyword'
+    #swagger.description = 'Endpoint to search 15 restaurants from Google API based on the keyword and the coordinate'
+    */
+
+  /* 
+    #swagger.parameters['keyword'] = {
+      in: 'query',
+      description: 'The keyword to be searched by user',
+      required: 'true',
+      type: 'string',
+    }
+    #swagger.parameters['lat'] = {
+      in: 'query',
+      description: 'The latitude to be searched by user',
+      required: 'true',
+      type: 'string',
+    }
+    #swagger.parameters['lng'] = {
+      in: 'query',
+      description: 'The longitude to be searched by user',
+      required: 'true',
+      type: 'string',
+    }
+  */
+
+  // get query parameter
+  const { keyword, lat, lng } = req.query;
+  // send request to Google API
+  try {
+    const body = {
+      textQuery: keyword,
+      includedType: "restaurant",
+      languageCode: "zh-TW",
+      pageSize: 15,
+      locationBias: {
+        circle: {
+          center: {
+            latitude: lat,
+            longitude: lng,
+          },
+          radius:   2000.0,
+        },
+      },
+    };
+    const headers = {
+      "X-Goog-Api-Key": process.env.API_KEY,
+      "X-Goog-FieldMask": [
+        "places.id",
+        "places.displayName",
+        "places.formattedAddress",
+        "places.photos",
+        "places.priceRange",
+        "places.rating",
+        "places.userRatingCount",
+        "places.currentOpeningHours",
+        "places.location",
+      ].join(","),
+    };
+    const response = await axios.post(
+      "https://places.googleapis.com/v1/places:searchText",
+      body,
+      {
+        headers,
+      }
+    );
+
+    const places = [];
+    for (const ele of response.data.places) {
+      places.push({
+        id: ele.id,
+        name: ele.displayName.text,
+        rating: ele.rating ?? null,
+        userRatingCount: ele.userRatingCount ?? null,
+        openNow: ele.currentOpeningHours?.openNow ?? null,
+        address: ele.formattedAddress ?? null,
+        startPrice: ele.priceRange?.startPrice?.units ?? null,
+        endPrice: ele.priceRange?.endPrice?.units ?? null,
+        photoId: ele.photos.length > 0 ? ele.photos[0].name : null,
+        lat: ele.location.latitude,
+        lng: ele.location.longitude,
+      });
+    }
+    res.json(places);
+  } catch (err) {
+    console.log(err);
+    res.status(404).json([]);
+  }
+});
+
 router.get("/details", async (req, res, next) => {
   /* 	
     #swagger.summary = 'Get place detail information'
@@ -149,7 +241,6 @@ router.get("/photo", async (req, res, next) => {
 
     // prepare data
     //FIXME
-    res.header("Access-Control-Allow-Origin", "*");
     res.contentType(response.headers["content-type"]).send(response.data);
   } catch (err) {
     // TODO: error handling
@@ -158,20 +249,13 @@ router.get("/photo", async (req, res, next) => {
   }
 });
 
-//根據關鍵字和經緯度搜尋結果
-router.get("/search", async (req, res, next) => {
+router.get("/staticmap", async(req, res, next) => {
   /* 	
-    #swagger.summary = 'Search restaurants for the keyword'
-    #swagger.description = 'Endpoint to search 15 restaurants from Google API based on the keyword and the coordinate'
-    */
+    #swagger.summary = 'Get staticmap image'
+    #swagger.description = 'Endpoint to get staticmap image from Google API given by the location'
+  */
 
   /* 
-    #swagger.parameters['keyword'] = {
-      in: 'query',
-      description: 'The keyword to be searched by user',
-      required: 'true',
-      type: 'string',
-    }
     #swagger.parameters['lat'] = {
       in: 'query',
       description: 'The latitude to be searched by user',
@@ -186,68 +270,28 @@ router.get("/search", async (req, res, next) => {
     }
   */
 
-  // get query parameter
-  const { keyword, lat, lng } = req.query;
-  // send request to Google API
-  try {
-    const body = {
-      textQuery: keyword,
-      includedType: "restaurant",
-      languageCode: "zh-TW",
-      pageSize: 15,
-      locationBias: {
-        circle: {
-          center: {
-            latitude: lat,
-            longitude: lng,
-          },
-          radius:   2000.0,
-        },
-      },
-    };
-    const headers = {
-      "X-Goog-Api-Key": process.env.API_KEY,
-      "X-Goog-FieldMask": [
-        "places.id",
-        "places.displayName",
-        "places.formattedAddress",
-        "places.photos",
-        "places.priceRange",
-        "places.rating",
-        "places.userRatingCount",
-        "places.currentOpeningHours",
-        "places.location",
-      ].join(","),
-    };
-    const response = await axios.post(
-      "https://places.googleapis.com/v1/places:searchText",
-      body,
+    // get query parameter
+    const { lat, lng } = req.query;
+    try{
+    const response = await axios.get(
+      'https://maps.googleapis.com/maps/api/staticmap',
       {
-        headers,
+        responseType: "arraybuffer",
+        params: {
+          key: process.env.API_KEY,
+          center: `${lat},${lng}`,
+          zoom: 15,
+          size: '400x400',
+          markers: `color:red|${lat},${lng}`,
+        },
       }
     );
-
-    const places = [];
-    for (const ele of response.data.places) {
-      places.push({
-        id: ele.id,
-        name: ele.displayName.text,
-        rating: ele.rating ?? null,
-        userRatingCount: ele.userRatingCount ?? null,
-        openNow: ele.currentOpeningHours?.openNow ?? null,
-        address: ele.formattedAddress ?? null,
-        startPrice: ele.priceRange?.startPrice?.units ?? null,
-        endPrice: ele.priceRange?.endPrice?.units ?? null,
-        photoId: ele.photos.length > 0 ? ele.photos[0].name : null,
-        lat: ele.location.latitude,
-        lng: ele.location.longitude,
-      });
-    }
-    res.json(places);
-  } catch (err) {
-    console.log(err);
-    res.status(404).json([]);
+    //prepare data
+    res.contentType('image/png').send(response.data);
+  }catch(err){
+    // console.log(err);
+    res.status(404).json({});
   }
-});
+})
 
 module.exports = router;
