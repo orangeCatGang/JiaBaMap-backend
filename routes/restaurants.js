@@ -37,6 +37,7 @@ router.get("/search", async (req, res, next) => {
 
   if (!keyword || !lat || !lng) {
     res.status(400).json({ message: "Missing parameter" });
+    return;
   }
   // send request to Google API
   try {
@@ -124,6 +125,11 @@ router.get("/staticmap", async (req, res, next) => {
 
   // get query parameter
   const { lat, lng } = req.query;
+
+  if (!lat || !lng) {
+    res.status(400).json({ message: "Missing lat or lng" });
+    return;
+  }
   try {
     const response = await axios.get(
       "https://maps.googleapis.com/maps/api/staticmap",
@@ -194,10 +200,6 @@ router.get("/:id", async (req, res, next) => {
 
   // get query parameter
   const id = req.params.id;
-
-  if (!id) {
-    res.status(400).json({ message: "Missing id" });
-  }
 
   // send request to Google API
   try {
@@ -280,10 +282,6 @@ router.get("/photos/:id", async (req, res, next) => {
 
   // get query parameter
   const photoId = req.params.id;
-
-  if (!photoId) {
-    res.status(400).json({ message: "Missing id" });
-  }
 
   // send request to Google API
   try {
