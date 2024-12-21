@@ -34,6 +34,10 @@ router.get("/search", async (req, res, next) => {
 
   // get query parameter
   const { keyword, lat, lng } = req.query;
+
+  if (!keyword || !lat || !lng) {
+    res.status(400).json({ message: "Missing parameter" });
+  }
   // send request to Google API
   try {
     const body = {
@@ -47,7 +51,7 @@ router.get("/search", async (req, res, next) => {
             latitude: lat,
             longitude: lng,
           },
-          radius:   2000.0,
+          radius: 2000.0,
         },
       },
     };
@@ -84,7 +88,8 @@ router.get("/search", async (req, res, next) => {
         address: ele.formattedAddress ?? null,
         startPrice: ele.priceRange?.startPrice?.units ?? null,
         endPrice: ele.priceRange?.endPrice?.units ?? null,
-        photoId: ele.photos.length > 0 ? ele.photos[0].name : null,
+        photoId:
+          ele.photos.length > 0 ? encodeURIComponent(ele.photos[0].name) : null,
         lat: ele.location.latitude,
         lng: ele.location.longitude,
       });
@@ -96,7 +101,52 @@ router.get("/search", async (req, res, next) => {
   }
 });
 
-router.get("/details", async (req, res, next) => {
+router.get("/staticmap", async (req, res, next) => {
+  /* 	
+    #swagger.summary = 'Get staticmap image'
+    #swagger.description = 'Endpoint to get staticmap image from Google API given by the location'
+  */
+
+  /* 
+    #swagger.parameters['lat'] = {
+      in: 'query',
+      description: 'The latitude to be searched by user',
+      required: 'true',
+      type: 'string',
+    }
+    #swagger.parameters['lng'] = {
+      in: 'query',
+      description: 'The longitude to be searched by user',
+      required: 'true',
+      type: 'string',
+    }
+  */
+
+  // get query parameter
+  const { lat, lng } = req.query;
+  try {
+    const response = await axios.get(
+      "https://maps.googleapis.com/maps/api/staticmap",
+      {
+        responseType: "arraybuffer",
+        params: {
+          key: process.env.API_KEY,
+          center: `${lat},${lng}`,
+          zoom: 15,
+          size: "400x400",
+          markers: `color:red|${lat},${lng}`,
+        },
+      }
+    );
+    //prepare data
+    res.contentType("image/png").send(response.data);
+  } catch (err) {
+    // console.log(err);
+    res.status(404).json({});
+  }
+});
+
+router.get("/:id", async (req, res, next) => {
   /* 	
     #swagger.summary = 'Get place detail information'
     #swagger.description = 'Endpoint to get detail information of a place from Google API'
@@ -104,7 +154,7 @@ router.get("/details", async (req, res, next) => {
 
   /* 
     #swagger.parameters['id'] = {
-      in: 'query',
+      in: 'path',
       description: 'The ID of a place assigned by Google Places API',
       required: 'true',
       type: 'string',
@@ -143,8 +193,11 @@ router.get("/details", async (req, res, next) => {
   */
 
   // get query parameter
-  // TODO: error handling
-  const id = req.query.id;
+  const id = req.params.id;
+
+  if (!id) {
+    res.status(400).json({ message: "Missing id" });
+  }
 
   // send request to Google API
   try {
@@ -194,7 +247,10 @@ router.get("/details", async (req, res, next) => {
       nationalPhoneNumber: response.data.nationalPhoneNumber ?? null,
       googleMapsUri: response.data.googleMapsUri,
       openNow: response.data.currentOpeningHours?.openNow ?? null,
-      photoIds: photoNames,
+      // 為了避免photoId中的 “/”
+      // 影響後端路由的path parameter的取得,
+      // 所以先做encode
+      photoIds: photoNames.map((id) => encodeURIComponent(id)),
       lat: response.data.location.latitude,
       lng: response.data.location.longitude,
     };
@@ -207,7 +263,7 @@ router.get("/details", async (req, res, next) => {
 });
 
 //店家照片
-router.get("/photo", async (req, res, next) => {
+router.get("/photos/:id", async (req, res, next) => {
   /* 	
     #swagger.summary = 'Get photo'
     #swagger.description = 'Endpoint to get a photo from Google API given by the photo ID'
@@ -215,7 +271,7 @@ router.get("/photo", async (req, res, next) => {
 
   /* 
     #swagger.parameters['id'] = {
-      in: 'query',
+      in: 'path',
       description: 'The ID of a photo assigned by Google Places API',
       required: 'true',
       type: 'string',
@@ -223,12 +279,17 @@ router.get("/photo", async (req, res, next) => {
   */
 
   // get query parameter
-  const photoId = req.query.id;
+  const photoId = req.params.id;
+
+  if (!photoId) {
+    res.status(400).json({ message: "Missing id" });
+  }
 
   // send request to Google API
   try {
+    const decodedPhotoId = decodeURIComponent(photoId);
     const response = await axios.get(
-      `https://places.googleapis.com/v1/${photoId}/media`,
+      `https://places.googleapis.com/v1/${decodedPhotoId}/media`,
       {
         responseType: "arraybuffer",
         params: {
@@ -240,7 +301,6 @@ router.get("/photo", async (req, res, next) => {
     );
 
     // prepare data
-    //FIXME
     res.contentType(response.headers["content-type"]).send(response.data);
   } catch (err) {
     // TODO: error handling
@@ -248,50 +308,5 @@ router.get("/photo", async (req, res, next) => {
     res.status(404).json({});
   }
 });
-
-router.get("/staticmap", async(req, res, next) => {
-  /* 	
-    #swagger.summary = 'Get staticmap image'
-    #swagger.description = 'Endpoint to get staticmap image from Google API given by the location'
-  */
-
-  /* 
-    #swagger.parameters['lat'] = {
-      in: 'query',
-      description: 'The latitude to be searched by user',
-      required: 'true',
-      type: 'string',
-    }
-    #swagger.parameters['lng'] = {
-      in: 'query',
-      description: 'The longitude to be searched by user',
-      required: 'true',
-      type: 'string',
-    }
-  */
-
-    // get query parameter
-    const { lat, lng } = req.query;
-    try{
-    const response = await axios.get(
-      'https://maps.googleapis.com/maps/api/staticmap',
-      {
-        responseType: "arraybuffer",
-        params: {
-          key: process.env.API_KEY,
-          center: `${lat},${lng}`,
-          zoom: 15,
-          size: '400x400',
-          markers: `color:red|${lat},${lng}`,
-        },
-      }
-    );
-    //prepare data
-    res.contentType('image/png').send(response.data);
-  }catch(err){
-    // console.log(err);
-    res.status(404).json({});
-  }
-})
 
 module.exports = router;
