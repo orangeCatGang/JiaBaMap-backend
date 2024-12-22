@@ -2,8 +2,6 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 
-const app = express();
-
 //根據關鍵字和經緯度搜尋結果
 router.get("/search", async (req, res, next) => {
   /* 	
@@ -75,7 +73,7 @@ router.get("/search", async (req, res, next) => {
       body,
       {
         headers,
-      }
+      },
     );
 
     const places = [];
@@ -142,7 +140,7 @@ router.get("/staticmap", async (req, res, next) => {
           size: "400x400",
           markers: `color:red|${lat},${lng}`,
         },
-      }
+      },
     );
     //prepare data
     res.contentType("image/png").send(response.data);
@@ -226,7 +224,7 @@ router.get("/:id", async (req, res, next) => {
           key: process.env.API_KEY,
           languageCode: "zh-TW",
         },
-      }
+      },
     );
 
     const photoNum = 2;
@@ -295,7 +293,7 @@ router.get("/photos/:id", async (req, res, next) => {
           maxHeightPx: 1024,
           maxWidthPx: 1024,
         },
-      }
+      },
     );
 
     // prepare data
